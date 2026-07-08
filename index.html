@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>天气预报</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: "Microsoft YaHei", PingFang SC, sans-serif;
+    }
+    body {
+      background-color: #e6f2ff;
+      color: #222;
+      padding: 30px 15px;
+    }
+    .wrap {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    header {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    h1 {
+      color: #0066cc;
+      font-size: 32px;
+    }
+    /* 通用卡片样式 标准天气预报白底蓝边 */
+    .card {
+      background: #ffffff;
+      border-radius: 14px;
+      box-shadow: 0 2px 12px rgba(0,102,204,0.12);
+      border-top: 4px solid #007bff;
+      padding: 24px;
+      margin-bottom: 22px;
+    }
+    /* 定位按钮 */
+    .loc-box {
+      text-align: center;
+      margin-bottom: 16px;
+    }
+    #getLocationBtn {
+      padding: 10px 22px;
+      background: #007bff;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 15px;
+      cursor: pointer;
+    }
+    #getLocationBtn:hover {
+      background: #0056b3;
+    }
+    /* 搜索栏 */
+    .search-box {
+      display: flex;
+      gap: 10px;
+    }
+    #cityInput {
+      flex: 1;
+      padding: 12px 16px;
+      border: 1px solid #b8d8f5;
+      border-radius: 8px;
+      font-size: 16px;
+    }
+    #cityInput:focus {
+      outline: none;
+      border-color: #007bff;
+    }
+    #searchBtn {
+      padding: 12px 24px;
+      background: #007bff;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    #searchBtn:hover {
+      background: #0056b3;
+    }
+    /* 实时天气区域 */
+    .now-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .city-name {
+      font-size: 26px;
+      color: #003366;
+    }
+    .weather-desc {
+      color: #555;
+      margin-top: 6px;
+      font-size: 17px;
+    }
+    .temp-big {
+      font-size: 70px;
+      color: #0066cc;
+      font-weight: normal;
+    }
+    .now-info-row {
+      display: flex;
+      gap: 50px;
+      margin-top: 30px;
+    }
+    .info-item p:first-child {
+      color: #777;
+      font-size: 14px;
+    }
+    .info-item p:last-child {
+      font-size: 19px;
+      margin-top: 5px;
+      color: #004488;
+    }
+    /* 5天预报 */
+    .forecast-title {
+      font-size: 22px;
+      color: #004488;
+      margin-bottom: 20px;
+    }
+    .forecast-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 16px;
+    }
+    .day-card {
+      background: #f2f8ff;
+      border-radius: 10px;
+      text-align: center;
+      padding: 20px 10px;
+    }
+    .day-date {
+      color: #005599;
+      font-size: 16px;
+      margin-bottom: 10px;
+    }
+    .day-weather {
+      color: #333;
+      margin-bottom: 10px;
+    }
+    .max-t {
+      color: #0066cc;
+      font-size: 19px;
+      font-weight: bold;
+    }
+    .min-t {
+      color: #6699cc;
+      margin-top: 4px;
+    }
+    footer {
+      text-align: center;
+      margin-top: 50px;
+      color: #6688aa;
+      font-size: 14px;
+    }
+    /* 手机适配 */
+    @media (max-width: 580px) {
+      .search-box {
+        flex-direction: column;
+      }
+      .now-top {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 15px;
+      }
+      .now-info-row {
+        flex-wrap: wrap;
+        gap: 25px;
+      }
+      .temp-big {
+        font-size: 52px;
+      }
+    }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>天气预报</h1>
+  </header>
+
+  <div class="loc-box">
+    <button id="getLocationBtn">自动定位当前城市</button>
+  </div>
+
+  <section class="search-box card">
+    <input type="text" id="cityInput" placeholder="请输入城市名称，如：上海、成都">
+    <button id="searchBtn">查询</button>
+  </section>
+
+  <section class="card" id="nowWeatherBox">
+    <div id="nowContent">
+      <p style="color:#777;">输入城市名称或点击定位，查看实时天气</p>
+    </div>
+  </section>
+
+  <section class="card">
+    <h3 class="forecast-title">未来5天天气预报</h3>
+    <div class="forecast-list" id="forecastList"></div>
+  </section>
+
+  <footer>
+    前端课程考核项目 · 天气预报
+  </footer>
+</div>
+
+<script>
+  // 替换为你自己的和风天气KEY
+  const KEY = "填入你的和风天气key";
+  const cityInput = document.getElementById("cityInput");
+  const searchBtn = document.getElementById("searchBtn");
+  const getLocationBtn = document.getElementById("getLocationBtn");
+  const nowContent = document.getElementById("nowContent");
+  const forecastList = document.getElementById("forecastList");
+
+  // 页面加载读取本地缓存
+  window.onload = () => {
+    const lastCity = localStorage.getItem("lastCity");
+    if(lastCity) {
+      cityInput.value = lastCity;
+      getWeather(lastCity);
+    }
+  }
+
+  // 回车搜索
+  cityInput.addEventListener("keydown", e => {
+    if(e.key === "Enter") searchWeather();
+  })
+  searchBtn.addEventListener("click", searchWeather);
+
+  // 搜索校验
+  function searchWeather() {
+    const city = cityInput.value.trim();
+    if(!city) return alert("请输入城市名称！");
+    localStorage.setItem("lastCity", city);
+    getWeather(city);
+  }
+
+  // 异步请求天气接口
+  async function getWeather(city) {
+    try {
+      const cityRes = await fetch(`https://geoapi.qweather.com/v2/city/lookup?location=${city}&key=${KEY}`);
+      const cityData = await cityRes.json();
+      if(cityData.code !== "200") return alert("未查询到该城市");
+      const cityInfo = cityData.location[0];
+      const cityId = cityInfo.id;
+      const cityName = cityInfo.name;
+
+      const nowRes = await fetch(`https://devapi.qweather.com/v7/weather/now?location=${cityId}&key=${KEY}`);
+      const nowData = await nowRes.json();
+
+      const foreRes = await fetch(`https://devapi.qweather.com/v7/weather/5d?location=${cityId}&key=${KEY}`);
+      const foreData = await foreRes.json();
+
+      renderNow(cityName, nowData.now);
+      renderForecast(foreData.daily);
+    } catch(err) {
+      alert("网络请求失败，请检查网络或密钥");
+      console.error(err);
+    }
+  }
+
+  // 渲染实时天气
+  function renderNow(city, now) {
+    const { temp, feelsLike, text } = now;
+    nowContent.innerHTML = `
+      <div class="now-top">
+        <div>
+          <div class="city-name">${city}</div>
+          <div class="weather-desc">${text}</div>
+        </div>
+        <div class="temp-big">${temp}℃</div>
+      </div>
+      <div class="now-info-row">
+        <div class="info-item">
+          <p>实时温度</p>
+          <p>${temp}℃</p>
+        </div>
+        <div class="info-item">
+          <p>体感温度</p>
+          <p>${feelsLike}℃</p>
+        </div>
+      </div>
+    `
+  }
+
+  // 渲染5天预报
+  function renderForecast(list) {
+    forecastList.innerHTML = "";
+    list.forEach(item => {
+      const { fxDate, tempMax, tempMin, textDay } = item;
+      const div = document.createElement("div");
+      div.className = "day-card";
+      div.innerHTML = `
+        <div class="day-date">${fxDate}</div>
+        <div class="day-weather">${textDay}</div>
+        <div class="max-t">${tempMax}℃</div>
+        <div class="min-t">${tempMin}℃</div>
+      `;
+      forecastList.appendChild(div);
+    })
+  }
+
+  // 定位功能
+  getLocationBtn.addEventListener("click", () => {
+    if(!navigator.geolocation) return alert("浏览器不支持定位");
+    navigator.geolocation.getCurrentPosition(async pos => {
+      const lng = pos.coords.longitude;
+      const lat = pos.coords.latitude;
+      const res = await fetch(`https://geoapi.qweather.com/v2/city/lookup?location=${lng},${lat}&key=${KEY}`);
+      const data = await res.json();
+      const localCity = data.location[0].name;
+      cityInput.value = localCity;
+      localStorage.setItem("lastCity", localCity);
+      getWeather(localCity);
+    }, () => {
+      alert("定位失败，请开启位置权限");
+    })
+  })
+</script>
+</body>
+</html>
